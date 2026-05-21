@@ -1,18 +1,37 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
     username: {
       type: String,
       required: true,
+      unique: true,
     },
     email: {
       type: String,
       required: true,
+      unique: true,
+      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address."],
     },
-    // TODO: Add profileImage field
+    profileImage: {
+      type: String,
+      required: true,
+      validate: {
+        validator: function (v) {
+          return /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(v);
+        },
+        message: "Please enter a valid URL for the profile image.",
+      },
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("User", userSchema);
+// ✅ Cascade delete: remove accommodations when user is deleted
+userSchema.pre("findOneAndDelete", async function (next) {
+  const userId = this.getQuery()._id;
+  await mongoose.model("Accommodation").deleteMany({ userId });
+  next();
+});
+
+export default mongoose.model("User", userSchema);
